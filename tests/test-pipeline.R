@@ -1,0 +1,84 @@
+if (dir.exists('.Rlib')) .libPaths(c(normalizePath('.Rlib'), .libPaths()))
+library(testthat)
+source('config.R')
+for (file in c('api', 'data', 'model', 'demo')) source(paste0('R/', file, '.R'))
+
+test_that('NBA JSON parsing preserves nulls and rejects incompatible schemas', {
+  body <- '{"resultSets":[{"headers":["PLAYER_ID","LANE_AGILITY_TIME"],"rowSet":[[1,null],[2,11.2]]}]}'
+  x <- parse_result(body, c('PLAYER_ID', 'LANE_AGILITY_TIME'))
+  expect_equal(x$player_id, c(1, 2))
+  expect_true(is.na(x$lane_agility_time[1]))
+  expect_equal(x$lane_agility_time[2], 11.2)
+  expect_error(parse_result(body, 'MISSING'), 'Expected exactly one')
+  expect_error(parse_result('{"resultSets":[]}', 'PLAYER_ID'), 'Expected exactly one')
+})
+
+test_that('outcomes pool attempts and matching uses IDs instead of names', {
+  cfg <- config
+  cfg$combine_years <- 2019L
+  cfg$season_starts <- 2019:2021
+  cfg$min_defended_attempts <- 1L
+  drills <- data.frame(player_id = c(1, NA), player_name = c('Same name', 'Same name'),
+    position = 'SG', combine_year = 2019L, lane_agility_time = 11)
+  anthro <- data.frame(player_id = c(1, NA), combine_year = 2019L,
+    height_wo_shoes = c(77, 99), wingspan = c(81, 99), weight = c(210, 999))
+  defense <- data.frame(close_def_person_id = 1, season_start = 2019:2021,
+    d_fgm = c(10, 60, 30), d_fga = c(20, 100, 80), normal_fg_pct = c(.5, .6, .5))
+  out <- prepare_data(list(drills = drills, anthro = anthro, defense = defense), cfg)
+  expect_equal(out$analysis$defended_attempts, 200)
+  expect_equal(out$analysis$defense_gap_pp, -5) # 100/200 minus 110/200
+  expect_equal(nrow(out$analysis), 1L)
+  expect_true(is.na(out$cohort$height_wo_shoes[2]))
+  expect_equal(out$cohort$status[2], 'Missing NBA player ID')
+  broken <- defense[c(1, 1, 2, 3), ]
+  expect_error(prepare_data(list(drills = drills, anthro = anthro, defense = broken), cfg), 'duplicate keys')
+  bad <- defense
+  bad$normal_fg_pct <- 50
+  expect_error(prepare_data(list(drills = drills, anthro = anthro, defense = bad), cfg), 'Invalid defensive units')
+})
+
+test_that('later repeat attendees and incomplete calendar windows are audited', {
+  inputs <- demo_inputs(config)
+  repeat_drill <- inputs$drills[1, ]
+  repeat_drill$combine_year <- repeat_drill$combine_year + 1
+  repeat_anthro <- inputs$anthro[1, ]
+  repeat_anthro$combine_year <- repeat_anthro$combine_year + 1
+  inputs$drills <- rbind(inputs$drills, repeat_drill)
+  inputs$anthro <- rbind(inputs$anthro, repeat_anthro)
+  out <- prepare_data(inputs, config)
+  expect_equal(nrow(out$repeated), 1L)
+  expect_equal(sum(out$cohort$player_id == repeat_drill$player_id), 1L)
+  cfg <- config
+  cfg$season_starts <- 2013:2023
+  out <- prepare_data(demo_inputs(cfg), cfg)
+  expect_true(all(out$cohort$status[out$cohort$combine_year >= 2022] == 'Incomplete calendar window'))
+})
+
+test_that('preprocessing uses training medians and reports missing features', {
+  train <- data.frame(height_wo_shoes = c(75, 77, NA), position_group = c('G', 'F', 'C'))
+  test <- data.frame(height_wo_shoes = c(NA, 999), position_group = c('Other', 'G'))
+  a <- design(train, 'height_wo_shoes')
+  b <- design(test, 'height_wo_shoes', a$medians)
+  expect_equal(a$medians[[1]], 76)
+  expect_equal(unname(b$x[1, 'height_wo_shoes']), 76)
+  expect_equal(unname(b$x[1, 'height_wo_shoes_missing']), 1)
+  expect_identical(colnames(a$x), colnames(b$x))
+})
+
+test_that('held-out outcomes cannot affect tuning, fitted predictions, or response curves', {
+  d <- prepare_data(demo_inputs(config), config)$analysis
+  a <- evaluate_models(d, config)
+  changed <- d
+  mask <- changed$combine_year %in% a$test_years
+  changed$defense_gap_pp[mask] <- changed$defense_gap_pp[mask] + 50
+  b <- evaluate_models(changed, config)
+  expect_true(max(a$train_years) < min(a$test_years))
+  expect_true(max(a$train_years) + config$window_seasons <= min(a$test_years))
+  expect_equal(a$embargo_years, c(2019, 2020))
+  expect_equal(a$tuning, b$tuning)
+  expect_equal(a$predictions$predicted, b$predictions$predicted)
+  expect_equal(a$effects, b$effects)
+  expect_true(all(a$metrics$players == a$test_n))
+  expect_true(all(is.finite(a$metrics$rmse)))
+})
+cat('Pipeline verification complete.\n')

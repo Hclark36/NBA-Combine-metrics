@@ -1,0 +1,13 @@
+project:
+  type: default
+  output-dir: dist
+  execute-dir: project
+format:
+  dashboard:
+    theme: [cosmo, dashboard.scss]
+    embed-resources: true
+    scrolling: true
+execute:
+  echo: false
+  warning: false
+  message: false

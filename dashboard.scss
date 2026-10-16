@@ -1,0 +1,20 @@
+/*-- scss:defaults --*/
+$primary: #0d776f;
+$body-bg: #f2f4f1;
+$body-color: #172c30;
+$font-family-sans-serif: 'Avenir Next', 'Segoe UI', sans-serif;
+$navbar-bg: #142f34;
+$navbar-fg: #ffffff;
+$card-border-color: #d8e1dd;
+/*-- scss:rules --*/
+.card { border-radius: 12px; box-shadow: 0 3px 16px rgba(20,47,52,.04); }
+.card-header { font-weight: 650; background: #fff; border-bottom: 1px solid #e1e8e4; }
+.mode-banner { padding: 16px 20px; border-left: 5px solid #b35d1e; background: #fff0df; border-radius: 8px; margin: 12px 0; }
+.research-note { padding: 12px 18px; background: #e2efea; border-radius: 8px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px; margin: 20px 0; }
+.stat { background: #fff; border: 1px solid #d8e1dd; border-radius: 10px; padding: 18px; }
+.stat strong { display: block; font-size: 2rem; color: #0d776f; }
+.stat span { font-size: .88rem; color: #536568; }
+.filters { padding: 10px; }
+.plotly { min-height: 360px; }
+table { font-size: .9rem; }

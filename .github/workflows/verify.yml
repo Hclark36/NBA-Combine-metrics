@@ -1,0 +1,28 @@
+name: Verify R pipeline and demo dashboard
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4'
+          use-public-rspm: true
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: '1.6.42'
+      - name: Install project dependencies
+        run: Rscript scripts/setup.R
+      - name: Verify aggregation and temporal isolation
+        run: Rscript tests/test-pipeline.R
+      - name: Generate simulated preview
+        run: Rscript scripts/run.R --demo
+      - name: Render standalone dashboard
+        run: Rscript scripts/render.R --demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulated-dashboard
+          path: dist/demo.html

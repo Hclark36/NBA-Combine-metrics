@@ -1,0 +1,258 @@
+---
+title: "Combine → Court"
+subtitle: "Does agility translate to NBA shot defense?"
+author: "Hunter Clark"
+format:
+  dashboard:
+    nav-buttons:
+      - icon: github
+        href: https://github.com/Hclark36/NBA-Combine-metrics
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(crosstalk)
+library(htmltools)
+invisible(Sys.setlocale('LC_CTYPE', 'en_US.UTF-8'))
+mode <- Sys.getenv('NBA_ANALYSIS_MODE', 'live')
+stopifnot(mode %in% c('demo', 'live'))
+path <- file.path('output', mode, 'analysis.rds')
+if (!file.exists(path)) stop('No analysis for requested mode. Run scripts/run.R first.')
+result <- readRDS(path)
+stopifnot(identical(result$mode, mode))
+d <- result$prepared$analysis
+cohort <- result$prepared$cohort
+metrics <- result$models$metrics
+demo <- identical(mode, 'demo')
+label <- function(text) paste0(if (demo) 'SIMULATED · ' else '', text)
+palette <- c(G = '#087f78', F = '#ce7231', C = '#5b66a5', Other = '#777777')
+theme_set(theme_minimal(base_size = 12) + theme(panel.grid.minor = element_blank()))
+interactive_plot <- function(p) ggplotly(p) |> config(displaylogo = FALSE)
+banner <- function() {
+  if (demo) div(class = 'mode-banner', strong('SIMULATED PREVIEW — NO NBA FINDINGS'),
+    tags$br(), 'All players and results on this page are invented to test the software. ',
+    'Do not interpret model scores or chart patterns as evidence about basketball.')
+  else div(class = 'research-note', strong('OBSERVATIONAL NBA ANALYSIS'), tags$br(),
+    'Shot-defense associations among measured combine participants with matched NBA outcomes. ',
+    'This is not a causal estimate or an overall defensive ranking.')
+}
+```
+
+# Overview
+
+## Row
+
+### The question {.height=auto}
+
+```{r}
+banner()
+tags$p('Does lane agility improve prediction of defended-shot outcomes beyond size and position? ',
+       'Lower agility times are faster; lower defensive shooting gaps are better.')
+tags$div(class = 'stat-grid',
+  div(class = 'stat', strong(nrow(cohort)), span('Combine participants after deduplication')),
+  div(class = 'stat', strong(nrow(d)), span('Eligible for the matched analysis')),
+  div(class = 'stat', strong(result$models$test_n), span('Players in untouched test classes')),
+  div(class = 'stat', strong(paste(range(d$combine_year), collapse = '–')), span('Combine years')))
+```
+
+## Row
+
+### Does agility add predictive value?
+
+```{r}
+p <- ggplot(metrics, aes(reorder(model, -rmse), rmse, fill = model)) +
+  geom_col(width = .65, show.legend = FALSE) + coord_flip() +
+  scale_fill_manual(values = c('#77918b', '#0d776f', '#ce7231', '#5b66a5')) +
+  labs(title = label('Held-out prediction error'), x = NULL, y = 'RMSE (percentage points; lower is better)')
+interactive_plot(p)
+```
+
+### Read the result {.height=auto}
+
+```{r}
+base <- metrics$rmse[metrics$model == 'Size + position']
+agility <- metrics$rmse[metrics$model == '+ Lane agility']
+delta <- base - agility
+if (demo) {
+  tags$p(strong('No research conclusion is available from simulated data.'))
+} else {
+  tags$p(sprintf('Adding lane agility %s held-out RMSE by %.2f percentage points.',
+    if (delta >= 0) 'reduced' else 'increased', abs(delta)))
+  tags$p('This is a point estimate from one temporal holdout. Small differences may be noise; ',
+         'repeat across additional class windows before making a scouting claim.')
+}
+tags$p('Training classes: ', paste(result$models$train_years, collapse = ', '),
+       '. Untouched test classes: ', paste(result$models$test_years, collapse = ', '), '.')
+tags$p('Classes omitted between training and test to prevent overlapping outcome windows: ',
+       paste(result$models$embargo_years, collapse = ', '), '.')
+knitr::kable(metrics, digits = 2, col.names = c('Model', 'Players', 'RMSE (pp)', 'MAE (pp)'))
+```
+
+# Explore players
+
+## Row
+
+### Filter the sample {.height=auto}
+
+```{r}
+banner()
+shared <- SharedData$new(d, key = ~as.character(player_id), group = 'players')
+bscols(widths = c(4, 4, 4),
+  filter_select('position', 'Position', shared, ~position_group),
+  filter_slider('year', 'Combine year', shared, ~combine_year, step = 1, sep = '', ticks = FALSE),
+  filter_slider('attempts', 'Defended shots', shared, ~defended_attempts))
+```
+
+## Row
+
+### Agility versus defended-shot outcomes
+
+```{r}
+plot_ly(shared, x = ~lane_agility_time, y = ~defense_gap_pp,
+  color = ~position_group, colors = palette, type = 'scatter', mode = 'markers',
+  text = ~paste0(player_name, '<br>Combine: ', combine_year,
+    '<br>Agility: ', round(lane_agility_time, 2), ' seconds',
+    '<br>Defense gap: ', round(defense_gap_pp, 2), ' pp',
+    '<br>Defended shots: ', defended_attempts), hoverinfo = 'text',
+  marker = list(size = 9, opacity = .75)) |>
+  layout(title = label('Faster drill ≠ automatically better shot defense'),
+    xaxis = list(title = 'Lane agility (seconds; faster ←)'),
+    yaxis = list(title = 'Defense gap (pp; better ↓)'),
+    shapes = list(list(type = 'line', xref = 'paper', x0 = 0, x1 = 1, y0 = 0, y1 = 0,
+                       line = list(color = '#999', dash = 'dot')))) |>
+  config(displaylogo = FALSE)
+```
+
+### Size and athletic profile
+
+```{r}
+plot_ly(shared, x = ~height_wo_shoes, y = ~max_vertical_leap,
+  color = ~position_group, colors = palette, type = 'scatter', mode = 'markers',
+  text = ~paste0(player_name, '<br>Height: ', round(height_wo_shoes, 1), ' inches',
+                 '<br>Max vertical: ', round(max_vertical_leap, 1), ' inches'),
+  hoverinfo = 'text', marker = list(size = 9, opacity = .75)) |>
+  layout(title = label('Explore body size and explosiveness'),
+    xaxis = list(title = 'Height without shoes (inches)'),
+    yaxis = list(title = 'Maximum vertical leap (inches)')) |>
+  config(displaylogo = FALSE)
+```
+
+# Model lab
+
+## Row
+
+### Adjusted response
+
+```{r}
+interactive_plot(ggplot(result$models$effects, aes(lane_agility_time, predicted_gap)) +
+  geom_line(linewidth = 1.3, color = '#0d776f') +
+  labs(title = label('Model response to lane agility'), x = 'Lane agility (seconds)',
+       y = 'Average predicted defense gap (pp)',
+       subtitle = 'Training-player profiles held fixed; 5th–95th percentile range'))
+```
+
+### Predicted versus observed
+
+```{r}
+pred <- filter(result$models$predictions, model == '+ Lane agility')
+interactive_plot(ggplot(pred, aes(defense_gap_pp, predicted,
+  text = paste0(player_name, '<br>Combine: ', combine_year))) +
+  geom_abline(slope = 1, intercept = 0, linetype = 'dashed', color = '#888') +
+  geom_point(color = '#0d776f', alpha = .7) +
+  labs(title = label('Untouched test players'), x = 'Observed defense gap (pp)', y = 'Predicted gap (pp)'))
+```
+
+## Row
+
+### What this model tests {.height=auto}
+
+The same eligible players are used for every model. Ridge regression shrinks correlated measurements and provides an interpretable first benchmark. The **size + position** model includes height, wingspan, weight, position, and combine year. We then add lane agility; the full model adds the remaining drills.
+
+Penalty strength is selected by rolling forward through training draft classes. Both inner validation and final testing omit classes whose three-season outcome window would not have finished before the prediction combine. Every validation fold learns its own imputation and scaling from earlier, fully observed classes. The latest configured classes are held out until final evaluation. Scores weight each player equally; defended-shot volume controls eligibility rather than silently allowing high-volume players to dominate the prediction target.
+
+The adjusted response curve changes agility while holding the other training-player features fixed. It is a model diagnostic, not a causal effect, a confidence interval, or evidence that training a faster drill improves defense.
+
+```{r}
+banner()
+```
+
+# In motion
+
+## Row
+
+### Play through combine classes
+
+```{r}
+banner()
+animated <- d |> mutate(position_group = factor(position_group, levels = c('G', 'F', 'C', 'Other')))
+plot_ly(animated, x = ~lane_agility_time, y = ~defense_gap_pp,
+  frame = ~combine_year, ids = ~as.character(player_id),
+  color = ~position_group, colors = palette, type = 'scatter', mode = 'markers',
+  text = ~paste0(player_name, '<br>Shots: ', defended_attempts), hoverinfo = 'text',
+  marker = list(size = 10, opacity = .8)) |>
+  layout(title = label('Each frame is a different combine cohort'),
+    xaxis = list(title = 'Lane agility (seconds)', range = range(d$lane_agility_time) + c(-.1, .1)),
+    yaxis = list(title = 'Defense gap (pp)', range = range(d$defense_gap_pp) + c(-1, 1))) |>
+  animation_opts(frame = 1100, transition = 0, redraw = TRUE) |>
+  animation_button(label = 'Play classes') |>
+  animation_slider(currentvalue = list(prefix = 'Combine year: ')) |>
+  config(displaylogo = FALSE)
+```
+
+## Row
+
+### How to read the animation {.height=auto}
+
+Press **Play classes**, or drag the year slider. These are different prospects in each frame, not the same players changing their drill times. Axes stay fixed to keep cohorts comparable. The Explore players page provides a static, filterable view of the same data.
+
+# Coverage & methods
+
+## Row
+
+### Measurement availability
+
+```{r}
+interactive_plot(ggplot(result$prepared$coverage,
+  aes(factor(combine_year), metric, fill = coverage_pct,
+      text = paste0(available, ' / ', n, ' recorded'))) +
+  geom_tile(color = 'white') + scale_fill_gradient(low = '#edf1ee', high = '#0d776f', limits = c(0, 100)) +
+  labs(title = label('Missing data is part of the story'), x = 'Combine year', y = NULL, fill = '% recorded'))
+```
+
+### Who enters the analysis? {.height=auto}
+
+```{r}
+banner()
+knitr::kable(result$prepared$flow, col.names = c('Mutually exclusive status', 'Players'))
+tags$p(nrow(result$prepared$repeated), ' later repeat combine records were excluded before this table.')
+tags$p('Each player needs at least ', result$config$min_defended_attempts,
+       ' defended shots across the ', result$config$window_seasons,
+       ' seasons following the combine. All three calendar seasons must be requested; ',
+       'a player may have observed tracking data in fewer seasons.')
+```
+
+## Row
+
+### Outcome and interpretation {.height=auto}
+
+**Defense gap (percentage points)** = 100 × [total defended makes / total defended attempts − the attempt-weighted normal opponent FG%]. Negative means opponents shot below their usual percentage on the recorded defended attempts. Season summaries are weighted by defended attempts, not averaged equally.
+
+This endpoint does not directly measure defensive slides, isolation containment, screen navigation, or overall defensive impact. We begin with recorded **lane agility** and retain modified lane agility as a separate measurement. Verify the drill definitions before calling either a defensive-slide test.
+
+Participation and missing drill results can select an unusual subset of prospects. No matched NBA observation does not mean a prospect was a poor defender or never played in the NBA. Team schemes, opponent quality, assignments, injuries, and playing opportunity can influence outcomes. This first version adjusts for combine size and position, and does not claim to account for those other factors.
+
+### Reproducibility {.height=auto}
+
+```{r}
+tags$p('Data mode: ', toupper(mode), '. Generated: ', result$generated_at)
+tags$p('Raw live responses and fetch metadata are cached locally; demo outputs use separate paths. ',
+       'See README.md for collection and rendering commands. Failed requests abort the live run.')
+```
+
+- [Combine drills and schema](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/draftcombinedrillresults.md)
+- [Anthropometric measurements](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/draftcombineplayeranthro.md)
+- [Defended-shot endpoint](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/leaguedashptdefend.md)
+
+NBA data remains subject to the provider's terms. The source repository is an API reference; this project does not claim to distribute a verified historical dataset.
