@@ -1,0 +1,62 @@
+{
+  "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+  "snapshot_created_at_utc": "2026-10-17 14:00:59 UTC",
+  "csv_sha256": "7bd33ae3691f032d4bae5429ea99b84bc3c7dad26147fafc0b183f6827610871",
+  "rows": 143,
+  "combine_years": [2024, 2025],
+  "completed_season_starts": [2024, 2025],
+  "interpretation": "Partial calendar windows, not complete three-season outcomes. Missing observations are not zero.",
+  "processing": "Validated NBA response parameters and totals; excluded ambiguous defense rows; matched NBA IDs; retained earliest combine per player across 2013-2025.",
+  "raw_combine_rows": {
+    "2024": 83,
+    "2025": 79
+  },
+  "retained_earliest_combine_rows": {
+    "2024": 71,
+    "2025": 72
+  },
+  "sources": [
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/draftcombinedrillresults/2025.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 13:58:47 UTC",
+      "sha256": "4b4282c9d912b970c3eab30e0bee9f2a424f3cb65985308c1e70ffdc7305fb00",
+      "rows": 83
+    },
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/draftcombinedrillresults/2026.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 13:58:47 UTC",
+      "sha256": "bcb5bb46b1d4c109b5684b985a09cc6c5c93851f2f9f83d4adfaa4b0e8be24e4",
+      "rows": 79
+    },
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/draftcombineplayeranthro/2025.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 13:58:47 UTC",
+      "sha256": "340cc91ab756739c225e6c9ee0794d3b463511977a1ad7ff66324d2ed6f13df8",
+      "rows": 83
+    },
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/draftcombineplayeranthro/2026.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 13:58:47 UTC",
+      "sha256": "c80f856dd3ba78276cf8257edacb45fddff1eeca199d38e31335ee7b8d743ede",
+      "rows": 79
+    },
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/leaguedashptdefend/2025/regular-season_overall_totals.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 03:31:49 UTC",
+      "sha256": "4edd6624fd38a4f7f0f7feec07371bf34fc8ddd1621eabdff3cc35801bcdc905",
+      "rows": 568
+    },
+    {
+      "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/leaguedashptdefend/2026/regular-season_overall_totals.json",
+      "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+      "retrieved_at_utc": "2026-10-17 03:31:49 UTC",
+      "sha256": "033adc7b6397bf4e5a05a108e9c406f826df0c50f2c0e655544176050c7ed1e5",
+      "rows": 580
+    }
+  ]
+}

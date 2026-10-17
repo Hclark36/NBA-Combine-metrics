@@ -53,7 +53,7 @@ run_robustness <- function(prepared, cfg) {
   skipped <- list()
   predictions <- list()
   splits <- list()
-  latest_class <- max(cfg$combine_years)
+  latest_class <- max(prepared$analysis$combine_year)
   primary_years <- tail(sort(unique(prepared$analysis$combine_year)), cfg$holdout_classes)
   case_number <- 0L
   for (threshold in cfg$robustness_thresholds) {

@@ -86,7 +86,14 @@ prepare_data <- function(inputs, cfg) {
     dplyr::group_by(combine_year, metric) |>
     dplyr::summarise(n = dplyr::n(), available = sum(!is.na(value)),
                      coverage_pct = 100 * mean(!is.na(value)), .groups = 'drop')
-  list(cohort = cohort, analysis = dplyr::filter(cohort, status == 'Included'),
+  recent <- cohort |>
+    dplyr::filter(!combine_year %in% eligible_years) |>
+    dplyr::mutate(available_calendar_seasons = vapply(combine_year, function(y)
+      sum(seq.int(y, y + cfg$window_seasons - 1L) %in% cfg$season_starts), integer(1)),
+      required_calendar_seasons = cfg$window_seasons,
+      final_window_season = sprintf('%d-%02d', combine_year + cfg$window_seasons - 1L,
+        (combine_year + cfg$window_seasons) %% 100L))
+  list(cohort = cohort, analysis = dplyr::filter(cohort, status == 'Included'), recent = recent,
        coverage = coverage, flow = dplyr::count(cohort, status, name = 'players'),
        repeated = repeated, windows = windows,
        excluded_defense = if (is.null(inputs$excluded_defense)) data.frame() else inputs$excluded_defense)

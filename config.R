@@ -1,8 +1,10 @@
 # Completed seasons only. A combine in year Y is followed by season Y-(Y+1).
 # The analysis window is the three seasons AFTER the combine, not first three
 # NBA appearances. No draft-history or name-based linkage is assumed.
+# Recent combine classes are imported for descriptive charts; prepare_data
+# excludes incomplete calendar windows from model training and evaluation.
 config <- list(
-  combine_years = 2013:2023,
+  combine_years = 2013:2025,
   season_starts = 2013:2025,
   window_seasons = 3L,
   min_defended_attempts = 100L,

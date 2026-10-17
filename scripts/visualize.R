@@ -10,6 +10,8 @@ if (!file.exists(path)) stop('Run scripts/run.R for mode ', mode, ' first.')
 source('R/visuals.R')
 result <- readRDS(path)
 plots <- finding_plots(result)
+summary_plots <- plots
+plots <- c(plots, recent_class_plots(result))
 folder <- file.path('output', mode, 'figures')
 dir.create(folder, recursive = TRUE, showWarnings = FALSE)
 for (name in names(plots)) {
@@ -22,7 +24,7 @@ grDevices::png(file.path(folder, 'findings.png'), width = 2400, height = 1800, r
 tryCatch({
   grid::grid.newpage()
   grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 2)))
-  for (i in seq_along(plots)) print(plots[[i]], vp = grid::viewport(
+  for (i in seq_along(summary_plots)) print(summary_plots[[i]], vp = grid::viewport(
     layout.pos.row = (i - 1L) %/% 2L + 1L, layout.pos.col = (i - 1L) %% 2L + 1L))
 }, finally = grDevices::dev.off())
 if (interactive()) for (p in plots) print(p)

@@ -78,6 +78,27 @@ test_that('later repeat attendees and incomplete calendar windows are audited', 
   expect_true(all(out$cohort$status[out$cohort$combine_year >= 2022] == 'Incomplete calendar window'))
 })
 
+test_that('recent classes retain partial observations but cannot enter model evaluation', {
+  cfg <- config
+  cfg$bootstrap_reps <- 20L
+  inputs <- demo_inputs(cfg)
+  a <- prepare_data(inputs, cfg)
+  expect_equal(sort(unique(a$recent$combine_year)), 2024:2025)
+  expect_true(all(a$recent$available_calendar_seasons[a$recent$combine_year == 2024] == 2L))
+  expect_true(all(a$recent$available_calendar_seasons[a$recent$combine_year == 2025] == 1L))
+  expect_true(all(a$analysis$combine_year <= 2023))
+  expect_true(any(is.finite(a$recent$defense_gap_pp)))
+  changed <- inputs
+  ids <- a$recent$player_id
+  changed$defense$d_fgm[changed$defense$close_def_person_id %in% ids] <- 0
+  b <- prepare_data(changed, cfg)
+  expect_equal(a$analysis, b$analysis)
+  r <- run_robustness(a, cfg)
+  expect_equal(r$planned_cases, 24L)
+  expect_true(all(r$splits$test_end <= 2023))
+  expect_equal(nrow(r$skipped), 0L)
+})
+
 test_that('preprocessing uses training medians and reports missing features', {
   train <- data.frame(height_wo_shoes = c(75, 77, NA), position_group = c('G', 'F', 'C'))
   test <- data.frame(height_wo_shoes = c(NA, 999), position_group = c('Other', 'G'))

@@ -26,7 +26,7 @@ result <- list(mode = mode, generated_at = format(Sys.time(), tz = 'UTC', usetz 
                session = capture.output(sessionInfo()))
 # Write only after the full pipeline succeeds. Demo and live outputs never overwrite each other.
 saveRDS(result, file.path('output', mode, 'analysis.rds'))
-for (name in c('cohort', 'coverage', 'flow', 'repeated', 'excluded_defense'))
+for (name in c('cohort', 'recent', 'coverage', 'flow', 'repeated', 'excluded_defense'))
   write.csv(prepared[[name]], file.path('output', mode, paste0(name, '.csv')), row.names = FALSE,
             fileEncoding = 'UTF-8')
 write.csv(models$metrics, file.path('output', mode, 'model_metrics.csv'), row.names = FALSE)

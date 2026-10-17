@@ -61,3 +61,37 @@ finding_plots <- function(result) {
       fill = 'RMSE gain (pp)', caption = 'Green: lower error with agility. Orange: higher error. Exploratory comparisons.') + style
   list(accuracy = accuracy, agility = agility, uncertainty = uncertainty, sensitivity = sensitivity)
 }
+
+recent_class_plots <- function(result) {
+  d <- result$prepared$recent
+  if (is.null(d) || !nrow(d)) return(list())
+  prefix <- if (identical(result$mode, 'demo')) 'SIMULATED | ' else ''
+  measured <- d[is.finite(d$lane_agility_time) & d$lane_agility_time > 0, ]
+  matched <- measured[is.finite(measured$defense_gap_pp), ]
+  colors <- c(G = '#087f78', F = '#ce7231', C = '#5b66a5', Other = '#777777')
+  style <- ggplot2::theme_minimal(base_size = 12) + ggplot2::theme(
+    panel.grid.minor = ggplot2::element_blank(), legend.position = 'bottom',
+    plot.title = ggplot2::element_text(face = 'bold', color = '#142f34'),
+    plot.caption = ggplot2::element_text(hjust = 0))
+  drills <- ggplot2::ggplot(measured,
+    ggplot2::aes(factor(combine_year), lane_agility_time)) +
+    ggplot2::geom_boxplot(outlier.shape = NA, fill = '#e2efea', width = .45) +
+    ggplot2::geom_point(ggplot2::aes(color = position_group), alpha = .65,
+      position = ggplot2::position_jitter(width = .13, height = 0, seed = 36)) +
+    ggplot2::scale_color_manual(values = colors) +
+    ggplot2::labs(title = paste0(prefix, 'The 2024 and 2025 combine classes'),
+      subtitle = 'Each dot is a player with recorded lane agility; earliest combine retained',
+      x = 'Combine class', y = 'Lane agility (seconds; lower is faster)', color = 'Position',
+      caption = 'Boxes: middle 50% and median; whiskers extend to 1.5 times the interquartile range.') + style
+  outcomes <- ggplot2::ggplot(matched, ggplot2::aes(lane_agility_time, defense_gap_pp)) +
+    ggplot2::geom_hline(yintercept = 0, linetype = 'dashed', color = '#7c8987') +
+    ggplot2::geom_point(ggplot2::aes(color = position_group, size = defended_attempts), alpha = .7) +
+    ggplot2::facet_wrap(~combine_year, nrow = 1) +
+    ggplot2::scale_color_manual(values = colors) + ggplot2::scale_size_continuous(range = c(2, 7)) +
+    ggplot2::labs(title = paste0(prefix, 'Early NBA shot defense: incomplete windows'),
+      subtitle = '2024: up to two seasons | 2025: up to one season | through 2025-26',
+      x = 'Lane agility (seconds; faster to the left)', y = 'Available-window defense gap (pp)',
+      color = 'Position', size = 'Defended shots',
+      caption = 'Includes small shot samples. Raw associations; unequal follow-up. Not three-season model scores.') + style
+  list(recent_drills = drills, recent_outcomes = outcomes)
+}

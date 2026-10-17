@@ -4,6 +4,14 @@ An R research project asking whether NBA combine agility adds predictive informa
 
 **Current status:** fitted on real NBA data through **2025–26**, using original NBA endpoint responses archived by SportsDataverse. There are 323 eligible combine participants and 90 held-out test players. The latest season contributes 11,522 defended shots from 28 eligible players. A separate simulated preview remains available for software testing.
 
+**Recent classes:** the dashboard's **2024 & 2025** tab includes combine measurements
+and available NBA results through 2025–26. After retaining each player's earliest combine,
+there are 71 participants from 2024 and 72 from 2025; 61 and 48 respectively have matched
+shot-defense observations. Their two- and one-season calendar windows remain incomplete,
+so these descriptive results do not enter the three-season model scores. A validated
+player-level snapshot is in `data/snapshots/recent_combine_2024-2025.csv`, with provenance
+in its metadata sidecar. Rebuild the analysis and render after updating an older checkout.
+
 **Robustness update:** 24 threshold/class-window scenarios and 2,000 paired bootstrap resamples per comparison are now included. Agility improves RMSE in 9 of 24 overlapping scenarios; its primary 95% conditional bootstrap interval includes zero. See [the robustness report](reports/robustness-results.md) and the dashboard's Robustness page.
 
 ## Quick start
@@ -40,7 +48,8 @@ source('scripts/visualize.R')
 ```
 
 This displays four charts in the Plots pane: model accuracy, agility versus shot defense,
-model improvement with uncertainty intervals, and a sensitivity heatmap. Use the Plots
+model improvement with uncertainty intervals, and a sensitivity heatmap, plus recent-class
+drill distributions and partial NBA outcomes for 2024 and 2025. Use the Plots
 pane arrows to browse them. PNG and PDF copies plus a combined `findings.png` chart sheet
 are saved in `output/archive/figures/`. In the Terminal, use
 `Rscript scripts/visualize.R --archive` (or `--demo` for clearly labeled simulated figures).
@@ -82,6 +91,7 @@ Outputs:
 | `dist/archive.html` | Real NBA analysis from the pinned archive through 2025–26 |
 | `data/snapshots/defense_2025-26.csv` | Committed latest-season NBA totals and provenance sidecar |
 | `output/<mode>/cohort.csv` | Participants, outcome totals, and inclusion status |
+| `output/<mode>/recent.csv` | Recent combine classes, partial outcomes, and calendar-window coverage |
 | `output/<mode>/coverage.csv` | Measurement availability by combine class |
 | `output/<mode>/flow.csv` | Mutually exclusive inclusion/exclusion counts |
 | `output/<mode>/repeated.csv` | Later repeat combine records removed |
@@ -99,7 +109,7 @@ Raw download caches, generated dashboards, and dependencies are ignored by Git. 
 
 ## Research design
 
-Default combine classes: **2013–2023**. Requested NBA seasons: **2013–14 through 2025–26**. For combine year Y, the outcome window is seasons starting Y, Y+1, and Y+2. This is a calendar window after the combine, not a player's first three NBA appearances. All three seasons must be in the configured request range; a player may have observations in fewer seasons. Change `config.R` to adjust years and the minimum 100 defended-shot threshold.
+Default combine classes: **2013–2025**, with **2013–2023** eligible for the complete-window model. Requested NBA seasons: **2013–14 through 2025–26**. For combine year Y, the outcome window is seasons starting Y, Y+1, and Y+2. This is a calendar window after the combine, not a player's first three NBA appearances. All three seasons must be in the configured request range; a player may have observations in fewer seasons. Change `config.R` to adjust years and the minimum 100 defended-shot threshold.
 
 Link only using NBA player IDs; never guess IDs from names or merge missing IDs. Retain unmatched participants in the audit, and use the earliest combine for repeat attendees. The archive adapter excludes all rows from ambiguous duplicate player-season keys rather than guessing how to pool position splits; eight rows from four player-seasons were excluded, and none match a combine participant in this dataset. The core pipeline still rejects any remaining duplicates. A successful but empty endpoint response is an explicit collection failure. Unknown numeric formats and invalid FG% units also stop the analysis.
 
