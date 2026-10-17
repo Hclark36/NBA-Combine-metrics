@@ -151,4 +151,19 @@ test_that('robustness rebuilds eligibility and uses purged chronological splits'
     expect_equal(sort(unique(p$combine_year)), 2023)
   }
 })
+test_that('shared widget hook preserves long HTML and is idempotent', {
+  source('scripts/fix_widgets.R', local = TRUE)
+  p <- tempfile(fileext = '.html')
+  on.exit(unlink(p), add = TRUE)
+  html <- paste0('<html><head><script>plugin();</script>',
+    paste(rep('x', 1100000), collapse = ''),
+    '<script>/*! jQuery vTest */ window.jQuery = {};</script></head><body>END</body></html>')
+  writeLines(html, p)
+  expect_true(fix_widget_order(p))
+  out <- paste(readLines(p), collapse = '\n')
+  expect_lt(regexpr('/*! jQuery', out, fixed = TRUE)[1], regexpr('plugin();', out, fixed = TRUE)[1])
+  expect_true(endsWith(out, '</body></html>'))
+  expect_false(fix_widget_order(p))
+  expect_equal(paste(readLines(p), collapse = '\n'), out)
+})
 cat('Pipeline verification complete.\n')

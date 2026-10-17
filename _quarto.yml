@@ -2,6 +2,8 @@ project:
   type: default
   output-dir: dist
   execute-dir: project
+  post-render:
+    - Rscript scripts/fix_widgets.R
 format:
   dashboard:
     theme: [cosmo, dashboard.scss]

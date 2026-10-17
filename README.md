@@ -19,6 +19,16 @@ Rscript scripts/render.R --demo
 
 Open `dist/demo.html`. The dashboard is a standalone HTML file with embedded widgets; it does not require an R server. Plotly hover, zoom, linked position/year/attempt filters, and class animation work in the browser.
 
+**In the RStudio Console**, use R commands rather than shell commands:
+
+```r
+source('scripts/setup.R')
+source('scripts/run.R')
+source('scripts/render.R')
+```
+
+These default to real archived NBA data and produce `dist/archive.html`. After generating the analysis, you can also open `dashboard.qmd` and click **Render**. It loads the project-local R library and applies the same widget compatibility hook. Commands starting with `Rscript` belong in RStudio's **Terminal**, not its R Console.
+
 Requirements: R >= 4.4 and Quarto >= 1.6. The render script discovers Quarto in PATH or the usual macOS RStudio bundle; otherwise set `QUARTO_BIN` to its executable path. Dependencies are installed into ignored project-local `.Rlib/`. A package version snapshot is written to `output/<mode>/session-info.txt` after every successful run. A fully pinned dependency lockfile is not included yet.
 
 ## Collect real data
@@ -37,8 +47,8 @@ The committed [2025–26 snapshot](data/snapshots/defense_2025-26.csv) contains 
 For direct live requests instead:
 
 ```sh
-Rscript scripts/run.R
-Rscript scripts/render.R
+Rscript scripts/run.R --live
+Rscript scripts/render.R --live
 ```
 
 The first command requests combine drills, anthropometrics, and overall defended-shot totals from NBA Stats. All requests must succeed before a new analysis is saved. Successful responses and fetch timestamps are retained in `data/raw/`; rerunning resumes from the cache. There is no automatic fallback to demo data.

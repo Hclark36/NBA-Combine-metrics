@@ -5,11 +5,11 @@ if (dir.exists('.Rlib')) .libPaths(c(normalizePath('.Rlib'), .libPaths()))
 source('config.R')
 for (file in c('api', 'archive', 'data', 'model', 'robustness', 'demo')) source(paste0('R/', file, '.R'))
 args <- commandArgs(trailingOnly = TRUE)
-allowed <- c('--demo', '--archive', '--refresh', '--fetch-only')
+allowed <- c('--demo', '--archive', '--live', '--refresh', '--fetch-only')
 if (any(!args %in% allowed)) stop('Unknown argument. Supported: ', paste(allowed, collapse = ', '))
-demo <- '--demo' %in% args
-if (demo && '--archive' %in% args) stop('Choose either --demo or --archive.')
-mode <- if (demo) 'demo' else if ('--archive' %in% args) 'archive' else 'live'
+modes <- intersect(args, c('--demo', '--archive', '--live'))
+if (length(modes) > 1L) stop('Choose one data mode: --demo, --archive, or --live.')
+mode <- if (length(modes)) sub('^--', '', modes) else 'archive'
 inputs <- switch(mode, demo = demo_inputs(config),
   archive = download_archive_inputs(config, '--refresh' %in% args),
   live = download_inputs(config, '--refresh' %in% args))
@@ -37,4 +37,4 @@ for (name in c('comparisons', 'splits', 'skipped', 'predictions'))
             row.names = FALSE, fileEncoding = 'UTF-8')
 writeLines(result$session, file.path('output', mode, 'session-info.txt'))
 cat('Completed ', toupper(mode), ' analysis: ', nrow(prepared$analysis), ' eligible players.\n', sep = '')
-cat('Render with: Rscript scripts/render.R ', if (mode != 'live') paste0('--', mode) else '', '\n', sep = '')
+cat('Render with: Rscript scripts/render.R --', mode, '\n', sep = '')
