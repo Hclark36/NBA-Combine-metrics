@@ -25,6 +25,9 @@ stopifnot(identical(result$mode, mode))
 d <- result$prepared$analysis
 cohort <- result$prepared$cohort
 metrics <- result$models$metrics
+uncertainty <- result$uncertainty
+robustness <- result$robustness
+agility_cases <- filter(robustness$comparisons, comparison == '+ Lane agility')
 demo <- identical(mode, 'demo')
 latest_start <- max(result$config$season_starts)
 latest_season <- sprintf('%d-%02d', latest_start, (latest_start + 1) %% 100)
@@ -59,7 +62,7 @@ tags$p('Does lane agility improve prediction of defended-shot outcomes beyond si
 tags$div(class = 'stat-grid',
   div(class = 'stat', strong(nrow(cohort)), span('Combine participants after deduplication')),
   div(class = 'stat', strong(nrow(d)), span('Eligible for the matched analysis')),
-  div(class = 'stat', strong(result$models$test_n), span('Players in untouched test classes')),
+  div(class = 'stat', strong(result$models$test_n), span('Players in held-out test classes')),
   div(class = 'stat', strong(paste(range(d$combine_year), collapse = '–')), span('Combine years')))
 tags$p('Latest season: ', latest_season, '. ', nrow(latest_windows),
        ' eligible players contribute ', format(sum(latest_windows$d_fga), big.mark = ','),
@@ -87,13 +90,17 @@ delta <- base - agility
 if (demo) {
   tags$p(strong('No research conclusion is available from simulated data.'))
 } else {
-  tags$p(sprintf('Adding lane agility %s held-out RMSE by %.2f percentage points.',
-    if (delta >= 0) 'reduced' else 'increased', abs(delta)))
-  tags$p('This is a point estimate from one temporal holdout. Small differences may be noise; ',
-         'repeat across additional class windows before making a scouting claim.')
+  interval <- filter(uncertainty, comparison == '+ Lane agility')
+  tagList(
+    tags$p(sprintf('Adding lane agility %s held-out RMSE by %.4f percentage points.',
+      if (delta >= 0) 'reduced' else 'increased', abs(delta))),
+    tags$p(sprintf('The 95%% paired bootstrap interval for the RMSE improvement is %.4f to %.4f pp.',
+      interval$rmse_lower, interval$rmse_upper)),
+    tags$p('See Robustness for alternative class windows and shot thresholds. ',
+           'Intervals are conditional on the fitted models; they do not include training or future-class variability.'))
 }
 tags$p('Training classes: ', paste(result$models$train_years, collapse = ', '),
-       '. Untouched test classes: ', paste(result$models$test_years, collapse = ', '), '.')
+       '. Held-out test classes: ', paste(result$models$test_years, collapse = ', '), '.')
 tags$p('Classes omitted between training and test to prevent overlapping outcome windows: ',
        paste(result$models$embargo_years, collapse = ', '), '.')
 knitr::kable(metrics, digits = 2, col.names = c('Model', 'Players', 'RMSE (pp)', 'MAE (pp)'))
@@ -170,7 +177,7 @@ interactive_plot(ggplot(pred, aes(defense_gap_pp, predicted,
   text = paste0(player_name, '<br>Combine: ', combine_year))) +
   geom_abline(slope = 1, intercept = 0, linetype = 'dashed', color = '#888') +
   geom_point(color = '#0d776f', alpha = .7) +
-  labs(title = label('Untouched test players'), x = 'Observed defense gap (pp)', y = 'Predicted gap (pp)'))
+  labs(title = label('Held-out test players'), x = 'Observed defense gap (pp)', y = 'Predicted gap (pp)'))
 ```
 
 ## Row
@@ -185,6 +192,78 @@ The adjusted response curve changes agility while holding the other training-pla
 
 ```{r}
 banner()
+```
+
+# Robustness
+
+## Row {height="auto"}
+
+### How certain is the apparent improvement? {.height=auto}
+
+```{r}
+#| height: auto
+banner()
+tags$p('Positive differences mean lower error than size + position; negative differences mean higher error. ',
+       'Intervals are 95% paired percentile bootstrap intervals from ', result$config$bootstrap_reps,
+       ' resamples of held-out players within each draft class.')
+if (!demo) tags$p(sprintf('Agility lowers RMSE in %d of %d evaluated scenarios. These overlapping scenarios are not independent replications.',
+  sum(agility_cases$delta_rmse > 0), nrow(agility_cases)))
+```
+
+## Row {height="320px"}
+
+### Primary held-out comparison
+
+```{r}
+#| height: 320px
+interactive_plot(ggplot(uncertainty, aes(x = delta_rmse, y = comparison)) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = '#777') +
+  geom_segment(aes(x = rmse_lower, xend = rmse_upper, yend = comparison), linewidth = 1, color = '#0d776f') +
+  geom_point(size = 3, color = '#ce7231') +
+  labs(title = label('RMSE improvement and uncertainty'), x = 'Size + position RMSE minus comparison RMSE (pp)',
+       y = NULL))
+```
+
+## Row {height="550px"}
+
+### Results depend on classes and shot thresholds
+
+```{r}
+#| height: 550px
+case_plot <- agility_cases |> mutate(window = ifelse(test_start == test_end,
+  as.character(test_start), paste0(test_start, '–', test_end)),
+  threshold = factor(threshold))
+interactive_plot(ggplot(case_plot, aes(x = delta_rmse, y = window,
+  text = paste0('Shots ≥ ', threshold, '<br>Test players: ', players,
+                '<br>RMSE improvement: ', round(delta_rmse, 4), ' pp'))) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = '#777') +
+  geom_segment(aes(x = rmse_lower, xend = rmse_upper, yend = window), color = '#0d776f') +
+  geom_point(color = '#ce7231', size = 2) +
+  facet_wrap(~threshold, ncol = 2, labeller = label_both) +
+  labs(title = label('Added lane agility: sensitivity'), x = 'RMSE improvement (pp; positive is better)',
+       y = NULL))
+```
+
+## Row {height="auto"}
+
+### What the intervals cover {.height=auto}
+
+Both models are evaluated on the same players in each resample. Resampling preserves each draft class's sample size and all model predictions for a selected player. The intervals describe test-player sampling uncertainty **conditional on the fitted models and observed draft classes**. They do not include model refitting, uncertainty in shot-level outcomes, or variation across future classes and team environments.
+
+Each scenario independently retunes its ridge penalty using earlier training classes, with the three-season outcome gap enforced in both tuning and evaluation. Lower shot thresholds can restore players excluded by the primary cutoff. Test windows overlap and their samples change with the cutoff, so the scenarios cannot be pooled as independent experiments. These are exploratory, pointwise intervals without adjustment for multiple comparisons; one interval excluding zero does not establish a repeatable scouting advantage.
+
+### Scenario coverage {.height=auto}
+
+```{r}
+#| height: auto
+tags$p(nrow(robustness$splits), ' of ', robustness$planned_cases, ' planned scenarios were evaluated.')
+if (nrow(robustness$skipped)) {
+  knitr::kable(robustness$skipped)
+} else {
+  tags$p('No scenarios were skipped.')
+}
+knitr::kable(select(agility_cases, threshold, test_start, test_end, train_players, players,
+                    delta_rmse, rmse_lower, rmse_upper), digits = 4)
 ```
 
 # In motion

@@ -27,7 +27,7 @@ Outcome: defended FG% minus attempt-weighted normal opponent FG%, measured in pe
 | Size + position + lane agility | 2.540 | 1.981 |
 | Full combine | 2.465 | 1.902 |
 
-Adding lane agility reduces RMSE by approximately **0.0024 pp** relative to size and position. Both models perform slightly worse than simply predicting the training mean. This run provides little evidence of useful additional predictive value from lane agility alone. The full combine model has lower point-estimate error, but the comparison has no uncertainty interval and should be replicated across more temporal splits before making a scouting claim.
+Adding lane agility reduces RMSE by approximately **0.0024 pp** relative to size and position. Both models perform slightly worse than simply predicting the training mean. This run provides little evidence of useful additional predictive value from lane agility alone. The full combine model has lower point-estimate error. The [subsequent robustness analysis](robustness-results.md) adds conditional paired bootstrap intervals and alternative temporal splits; the primary intervals include zero for both agility and the full combine model.
 
 This is an observational shot-defense analysis, not an estimate of the causal effect of defensive-slide training or a measure of overall defensive ability. Missing drill participation and tracking observations limit generalization.
 

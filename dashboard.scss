@@ -11,6 +11,10 @@ $card-border-color: #d8e1dd;
 .card-header { font-weight: 650; background: #fff; border-bottom: 1px solid #e1e8e4; }
 .mode-banner { padding: 16px 20px; border-left: 5px solid #b35d1e; background: #fff0df; border-radius: 8px; margin: 12px 0; }
 .research-note { padding: 12px 18px; background: #e2efea; border-radius: 8px; }
+.research-note, .mode-banner { flex: 0 0 auto !important; height: auto !important; }
+#robustness .card:has(.research-note):not(:has(.plotly)),
+#robustness .card:has(.mode-banner):not(:has(.plotly)) { flex: 0 0 auto !important; height: auto !important; }
+#robustness .cell-output-display:not(:has(.plotly)) { flex: 0 0 auto !important; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px; margin: 20px 0; }
 .stat { background: #fff; border: 1px solid #d8e1dd; border-radius: 10px; padding: 18px; }
 .stat strong { display: block; font-size: 2rem; color: #0d776f; }

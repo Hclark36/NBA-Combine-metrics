@@ -31,12 +31,19 @@ fit_ridge <- function(train, test, fields, lambda) {
        model = model, medians = a$medians, fields = fields, lambda = lambda)
 }
 
-evaluate_models <- function(data, cfg) {
+evaluate_models <- function(data, cfg, test_years = NULL) {
   assert_unique(data, 'player_id', 'Model data')
+  if (!is.null(test_years)) {
+    test_years <- sort(unique(test_years))
+    if (!length(test_years) || !all(test_years %in% data$combine_year))
+      stop('Requested test classes are absent from eligible data.')
+    data <- data[data$combine_year <= max(test_years), ]
+    cfg$holdout_classes <- length(test_years)
+  }
   years <- sort(unique(data$combine_year))
   if (length(years) < cfg$holdout_classes + cfg$window_seasons + 5L || nrow(data) < 80L)
     stop('Need at least 80 eligible players and enough classes for purged rolling validation.')
-  test_years <- tail(years, cfg$holdout_classes)
+  if (is.null(test_years)) test_years <- tail(years, cfg$holdout_classes)
   # A class's final outcome season must end before the first test combine.
   # For a three-season window and a 2021 test combine, train through 2018;
   # 2019/2020 outcomes would not yet be fully observable at prediction time.

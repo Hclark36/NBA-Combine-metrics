@@ -1,7 +1,7 @@
 if (dir.exists('.Rlib')) .libPaths(c(normalizePath('.Rlib'), .libPaths()))
 library(testthat)
 source('config.R')
-for (file in c('api', 'archive', 'data', 'model', 'demo')) source(paste0('R/', file, '.R'))
+for (file in c('api', 'archive', 'data', 'model', 'robustness', 'demo')) source(paste0('R/', file, '.R'))
 
 test_that('archive import rejects wrong seasons and per-game units', {
   body <- '{"parameters":{"Season":"2025-26","PerMode":"Totals"},"resultSets":[{"headers":["CLOSE_DEF_PERSON_ID","D_FGA"],"rowSet":[[1,100]]}]}'
@@ -104,5 +104,51 @@ test_that('held-out outcomes cannot affect tuning, fitted predictions, or respon
   expect_equal(a$effects, b$effects)
   expect_true(all(a$metrics$players == a$test_n))
   expect_true(all(is.finite(a$metrics$rmse)))
+})
+test_that('paired bootstrap preserves player pairing, class strata, and RNG state', {
+  # Each class has one player: resampling within a class must always return
+  # that same player, including when its row index is greater than one.
+  fixture <- dplyr::bind_rows(lapply(c('Size + position', '+ Lane agility', 'Full combine', 'Training mean'),
+    function(m) data.frame(player_id = c(10, 20), combine_year = c(2022, 2023),
+      defense_gap_pp = 0, model = m, predicted = if (m == '+ Lane agility') c(0, 0) else c(1, 2))))
+  set.seed(12)
+  state <- .Random.seed
+  a <- paired_uncertainty(fixture, reps = 40, seed = 36)
+  expect_identical(.Random.seed, state)
+  b <- paired_uncertainty(fixture[nrow(fixture):1, ], reps = 40, seed = 36)
+  expect_equal(a, b)
+  agility <- a[a$comparison == '+ Lane agility', ]
+  expect_equal(agility$delta_rmse, sqrt(2.5))
+  expect_equal(agility$rmse_lower, agility$delta_rmse)
+  expect_equal(agility$rmse_upper, agility$delta_rmse)
+  equal <- a[a$comparison == 'Full combine', ]
+  expect_equal(equal$delta_rmse, 0)
+  expect_equal(equal$rmse_lower, 0)
+  expect_equal(equal$rmse_upper, 0)
+  expect_error(paired_uncertainty(fixture[-1, ], reps = 40), 'complete, finite paired')
+  changed <- fixture
+  changed$defense_gap_pp[1] <- 1
+  expect_error(paired_uncertainty(changed, reps = 40), 'identical outcomes')
+})
+
+test_that('robustness rebuilds eligibility and uses purged chronological splits', {
+  prepared <- prepare_data(demo_inputs(config), config)
+  cfg <- config
+  cfg$bootstrap_reps <- 40L
+  cfg$robustness_thresholds <- c(50L, 100L)
+  cfg$robustness_test_starts <- 2023L
+  r <- run_robustness(prepared, cfg)
+  expect_equal(r$planned_cases, 2L)
+  expect_equal(nrow(r$skipped), 0L)
+  expect_true(all(r$splits$train_end + cfg$window_seasons <= r$splits$test_start))
+  expect_true(all(r$splits$train_end < r$splits$test_start))
+  # A lower threshold cannot lose eligible players in the same test class.
+  expect_gte(r$splits$test_players[r$splits$threshold == 50],
+             r$splits$test_players[r$splits$threshold == 100])
+  for (scenario in r$splits$scenario) {
+    p <- r$predictions[r$predictions$scenario == scenario, ]
+    expect_equal(length(unique(p$player_id)), nrow(p) / 4)
+    expect_equal(sort(unique(p$combine_year)), 2023)
+  }
 })
 cat('Pipeline verification complete.\n')

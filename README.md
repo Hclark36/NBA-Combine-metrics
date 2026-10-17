@@ -4,6 +4,8 @@ An R research project asking whether NBA combine agility adds predictive informa
 
 **Current status:** fitted on real NBA data through **2025–26**, using original NBA endpoint responses archived by SportsDataverse. There are 323 eligible combine participants and 90 held-out test players. The latest season contributes 11,522 defended shots from 28 eligible players. A separate simulated preview remains available for software testing.
 
+**Robustness update:** 24 threshold/class-window scenarios and 2,000 paired bootstrap resamples per comparison are now included. Agility improves RMSE in 9 of 24 overlapping scenarios; its primary 95% conditional bootstrap interval includes zero. See [the robustness report](reports/robustness-results.md) and the dashboard's Robustness page.
+
 ## Quick start
 
 Open `NBA-Combine-metrics.Rproj` in RStudio, or run these commands from this repository's root:
@@ -58,6 +60,11 @@ Outputs:
 | `output/<mode>/excluded_defense.csv` | Ambiguous player-season source rows excluded before matching |
 | `output/<mode>/model_metrics.csv` | Untouched test-class RMSE and MAE |
 | `output/<mode>/holdout_predictions.csv` | Per-player predictions for each model |
+| `output/<mode>/primary_uncertainty.csv` | Paired RMSE/MAE improvements and conditional 95% intervals |
+| `output/<mode>/robustness_comparisons.csv` | Alternative class windows and exposure cutoffs, with intervals |
+| `output/<mode>/robustness_splits.csv` | Train, tuning, embargo, and test classes for every evaluated scenario |
+| `output/<mode>/robustness_skipped.csv` | Unevaluable scenarios and explicit reasons, if any |
+| `output/<mode>/robustness_predictions.csv` | Paired per-player predictions for every scenario |
 | `output/<mode>/analysis.rds` | Full analysis, fitted models, tuning scores, provenance |
 
 Raw download caches, generated dashboards, and dependencies are ignored by Git. The validated latest-season snapshot and a concise results report are tracked alongside the source. Nothing in a demo run should be described as an empirical basketball result.
@@ -79,7 +86,9 @@ Four benchmarks use the same eligible players:
 
 The latest three available combine classes are held out. Both final testing and rolling validation **purge overlapping outcome windows**: a training class's three-season window must finish before the prediction combine. By default, train on 2013–2018, omit 2019–2020, and test on 2021–2023. Ridge penalty strength is selected by rolling earlier-to-later validation inside those training classes; medians, missing indicators, and scaling are learned within each fold. No held-out outcomes enter tuning. Evaluation weights players equally, reports RMSE/MAE in percentage points, and requires at least 80 eligible players and sufficient draft classes. The response curve is a model diagnostic over training profiles, not a causal estimate or uncertainty interval.
 
-Participation, nonrandom missingness, and NBA playing opportunity limit generalization. Missing tracking observations are not zero outcomes. Team schemes, assignments, opponent mix, injuries, and minutes are not fully controlled by this first model. Held-out score differences have no uncertainty intervals yet and should not be used to claim a definitive effect.
+Participation, nonrandom missingness, and NBA playing opportunity limit generalization. Missing tracking observations are not zero outcomes. Team schemes, assignments, opponent mix, injuries, and minutes are not fully controlled by this first model. The 95% bootstrap intervals pair the same test players across models and preserve the number of players in each class. They are conditional on fitted models and observed classes: they do not include refitting, future-class variability, or shot-level outcome uncertainty.
+
+Sensitivity analyses use 50, 100, 250, and 500 defended attempts and all six contiguous test windows within 2021–2023. Each scenario retunes on earlier classes with the existing three-season gap; low cutoffs restore eligible players from the audited cohort rather than filtering the already-selected primary sample. The windows overlap and intervals are pointwise, without multiple-comparison adjustment. Treat them as exploratory diagnostics, not independent replications or a way to choose a winning model on the test set.
 
 ## Project structure
 
@@ -89,6 +98,7 @@ R/api.R              HTTP requests, raw cache, schema validation
 R/archive.R          Pinned original NBA JSON archive and parameter checks
 R/data.R             ID joins, outcome aggregation, coverage audit
 R/model.R            Temporal validation, ridge models, predictions
+R/robustness.R       Paired bootstrap and class/threshold sensitivity analysis
 R/demo.R             Invented fixture for software verification
 scripts/setup.R      Project-local dependency installation
 scripts/run.R        Fetch → prepare → model → export
@@ -101,7 +111,7 @@ tests/               Aggregation, schema, ID, and leakage checks
 
 - Verify the exact drill protocol and assess coverage selection effects.
 - Examine shot categories separately and add exposure sensitivity analyses.
-- Add uncertainty for held-out performance differences and class-window sensitivity.
+- Extend uncertainty beyond fixed fitted models with refitting and more draft classes as they become available.
 - Compare ridge with a nonlinear model only after confirming adequate sample size.
 - Add player archetypes, vertical-versus-rebounding, and draft-value studies.
 

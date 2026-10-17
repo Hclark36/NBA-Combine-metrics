@@ -1,0 +1,4 @@
+"comparison","delta_rmse","rmse_lower","rmse_upper","delta_mae","mae_lower","mae_upper","players","classes","bootstrap_reps","seed","interval"
+"+ Lane agility",0.00237748783386138,-0.00674304145595533,0.0109161122442691,0.00555210232585979,-0.00370528284946421,0.0146700212737027,90,3,2000,36,"95% paired percentile; players stratified by draft class"
+"Full combine",0.0771629772983782,-0.0250370111846194,0.180256481368298,0.0846548400892346,-0.000223794462062998,0.172044678500346,90,3,2000,36,"95% paired percentile; players stratified by draft class"
+"Training mean",0.0295410147732316,-0.178899808727957,0.250654556397426,0.053892721963871,-0.104669972572268,0.2225108505417,90,3,2000,36,"95% paired percentile; players stratified by draft class"
