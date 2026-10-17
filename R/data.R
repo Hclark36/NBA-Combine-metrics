@@ -88,5 +88,6 @@ prepare_data <- function(inputs, cfg) {
                      coverage_pct = 100 * mean(!is.na(value)), .groups = 'drop')
   list(cohort = cohort, analysis = dplyr::filter(cohort, status == 'Included'),
        coverage = coverage, flow = dplyr::count(cohort, status, name = 'players'),
-       repeated = repeated, windows = windows)
+       repeated = repeated, windows = windows,
+       excluded_defense = if (is.null(inputs$excluded_defense)) data.frame() else inputs$excluded_defense)
 }

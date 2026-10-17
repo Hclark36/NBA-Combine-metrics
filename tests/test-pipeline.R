@@ -1,7 +1,31 @@
 if (dir.exists('.Rlib')) .libPaths(c(normalizePath('.Rlib'), .libPaths()))
 library(testthat)
 source('config.R')
-for (file in c('api', 'data', 'model', 'demo')) source(paste0('R/', file, '.R'))
+for (file in c('api', 'archive', 'data', 'model', 'demo')) source(paste0('R/', file, '.R'))
+
+test_that('archive import rejects wrong seasons and per-game units', {
+  body <- '{"parameters":{"Season":"2025-26","PerMode":"Totals"},"resultSets":[{"headers":["CLOSE_DEF_PERSON_ID","D_FGA"],"rowSet":[[1,100]]}]}'
+  expect_equal(validate_archive(body, c('D_FGA'),
+    list(Season = '2025-26', PerMode = 'Totals'), 'fixture')$d_fga, 100)
+  expect_error(validate_archive(body, c('D_FGA'),
+    list(Season = '2024-25'), 'fixture'), 'parameter mismatch: Season')
+  expect_error(validate_archive(body, c('D_FGA'),
+    list(PerMode = 'PerGame'), 'fixture'), 'parameter mismatch: PerMode')
+})
+
+test_that('committed latest-season snapshot contains exact valid totals', {
+  path <- 'data/snapshots/defense_2025-26.csv'
+  if (!file.exists(path)) skip('Snapshot not present')
+  d <- read.csv(path)
+  expect_equal(nrow(d), 580L)
+  expect_true(all(d$season_start == 2025L))
+  expect_equal(anyDuplicated(d$close_def_person_id), 0L)
+  expect_true(all(d$d_fga >= d$d_fgm & d$d_fgm >= 0))
+  expect_true(all(d$d_fga == round(d$d_fga)))
+  expect_true(all(d$normal_fg_pct >= 0 & d$normal_fg_pct <= 1))
+  expect_equal(digest::digest(file = path, algo = 'sha256'),
+    jsonlite::read_json('data/snapshots/defense_2025-26.metadata.json')$csv_sha256)
+})
 
 test_that('NBA JSON parsing preserves nulls and rejects incompatible schemas', {
   body <- '{"resultSets":[{"headers":["PLAYER_ID","LANE_AGILITY_TIME"],"rowSet":[[1,null],[2,11.2]]}]}'

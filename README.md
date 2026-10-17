@@ -2,7 +2,7 @@
 
 An R research project asking whether NBA combine agility adds predictive information about later defended-shot outcomes beyond size and position. Outputs include an interactive, self-contained HTML dashboard, linked player filters, a draft-class animation, coverage audits, and temporal model comparisons.
 
-**Current status:** working code and a simulated preview. The live NBA Stats smoke request timed out during development. No real NBA findings have been established. Demo players, IDs, and outcomes are invented and labeled throughout the dashboard.
+**Current status:** fitted on real NBA data through **2025–26**, using original NBA endpoint responses archived by SportsDataverse. There are 323 eligible combine participants and 90 held-out test players. The latest season contributes 11,522 defended shots from 28 eligible players. A separate simulated preview remains available for software testing.
 
 ## Quick start
 
@@ -21,6 +21,19 @@ Requirements: R >= 4.4 and Quarto >= 1.6. The render script discovers Quarto in 
 
 ## Collect real data
 
+Recommended: use the archived original NBA responses, pinned to a source commit:
+
+```sh
+Rscript scripts/run.R --archive
+Rscript scripts/render.R --archive
+```
+
+Open `dist/archive.html`. Both the exact source season and `PerMode=Totals` are validated before import. Archive files use **season ending years**, so the 2025–26 defense file is under `2026`, and the 2023 combine is file `2024.json`; the loader verifies the NBA response parameters instead of trusting filenames.
+
+The committed [2025–26 snapshot](data/snapshots/defense_2025-26.csv) contains **580 player records** with exact defended makes/attempts and normal opponent FG%. Its [metadata](data/snapshots/defense_2025-26.metadata.json) records the pinned URL, source commit, units, retrieval date, and CSV SHA-256. These are NBA tracking totals, not per-game estimates, and include no playoff rows.
+
+For direct live requests instead:
+
 ```sh
 Rscript scripts/run.R
 Rscript scripts/render.R
@@ -35,22 +48,25 @@ Outputs:
 | Path | Contents |
 | --- | --- |
 | `dist/demo.html` | Clearly labeled simulated preview |
-| `dist/live.html` | Dashboard from successfully collected NBA data |
+| `dist/live.html` | Dashboard from successfully collected live NBA data |
+| `dist/archive.html` | Real NBA analysis from the pinned archive through 2025–26 |
+| `data/snapshots/defense_2025-26.csv` | Committed latest-season NBA totals and provenance sidecar |
 | `output/<mode>/cohort.csv` | Participants, outcome totals, and inclusion status |
 | `output/<mode>/coverage.csv` | Measurement availability by combine class |
 | `output/<mode>/flow.csv` | Mutually exclusive inclusion/exclusion counts |
 | `output/<mode>/repeated.csv` | Later repeat combine records removed |
+| `output/<mode>/excluded_defense.csv` | Ambiguous player-season source rows excluded before matching |
 | `output/<mode>/model_metrics.csv` | Untouched test-class RMSE and MAE |
 | `output/<mode>/holdout_predictions.csv` | Per-player predictions for each model |
 | `output/<mode>/analysis.rds` | Full analysis, fitted models, tuning scores, provenance |
 
-Raw data, generated results, and dependencies are ignored by Git. Only project source is published to GitHub; nothing in a demo run should be described as an empirical basketball result.
+Raw download caches, generated dashboards, and dependencies are ignored by Git. The validated latest-season snapshot and a concise results report are tracked alongside the source. Nothing in a demo run should be described as an empirical basketball result.
 
 ## Research design
 
 Default combine classes: **2013–2023**. Requested NBA seasons: **2013–14 through 2025–26**. For combine year Y, the outcome window is seasons starting Y, Y+1, and Y+2. This is a calendar window after the combine, not a player's first three NBA appearances. All three seasons must be in the configured request range; a player may have observations in fewer seasons. Change `config.R` to adjust years and the minimum 100 defended-shot threshold.
 
-Link only using NBA player IDs; never guess IDs from names or merge missing IDs. Retain unmatched participants in the audit, and use the earliest combine for repeat attendees. Defensive player-season duplicates raise an error rather than double-counting traded-player totals. A successful but empty endpoint response is an explicit collection failure. Unknown numeric formats and invalid FG% units also stop the analysis.
+Link only using NBA player IDs; never guess IDs from names or merge missing IDs. Retain unmatched participants in the audit, and use the earliest combine for repeat attendees. The archive adapter excludes all rows from ambiguous duplicate player-season keys rather than guessing how to pool position splits; eight rows from four player-seasons were excluded, and none match a combine participant in this dataset. The core pipeline still rejects any remaining duplicates. A successful but empty endpoint response is an explicit collection failure. Unknown numeric formats and invalid FG% units also stop the analysis.
 
 **Outcome:** 100 × [sum of defended makes / sum of defended attempts − attempt-weighted normal opponent FG%]. Lower is better. This measures one aspect of shot defense; it is not a direct measure of defensive slides, isolation containment, or overall defense. Verify lane-agility and modified-lane-agility drill definitions before equating either with a specific slide test.
 
@@ -70,6 +86,7 @@ Participation, nonrandom missingness, and NBA playing opportunity limit generali
 ```text
 config.R             Analysis window and thresholds
 R/api.R              HTTP requests, raw cache, schema validation
+R/archive.R          Pinned original NBA JSON archive and parameter checks
 R/data.R             ID joins, outcome aggregation, coverage audit
 R/model.R            Temporal validation, ridge models, predictions
 R/demo.R             Invented fixture for software verification
@@ -82,7 +99,7 @@ tests/               Aggregation, schema, ID, and leakage checks
 
 ## Next research steps
 
-- Verify real endpoint coverage and the exact drill protocol.
+- Verify the exact drill protocol and assess coverage selection effects.
 - Examine shot categories separately and add exposure sensitivity analyses.
 - Add uncertainty for held-out performance differences and class-window sensitivity.
 - Compare ridge with a nonlinear model only after confirming adequate sample size.
@@ -93,6 +110,7 @@ tests/               Aggregation, schema, ID, and leakage checks
 - [NBA combine drill schema](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/draftcombinedrillresults.md)
 - [NBA anthropometric schema](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/draftcombineplayeranthro.md)
 - [NBA defended-shot schema](https://github.com/swar/nba_api/blob/master/docs/nba_api/stats/endpoints/leaguedashptdefend.md)
+- [SportsDataverse original NBA response archive](https://github.com/sportsdataverse/hoopR-nba-stats-raw)
 - [Quarto dashboards](https://quarto.org/docs/dashboards/)
 
 `nba_api` is an API client and documentation project, not the downloaded dataset. This project uses direct R HTTP requests so raw responses and collection failures remain inspectable. NBA data is subject to its provider's terms.

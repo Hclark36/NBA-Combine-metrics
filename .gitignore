@@ -6,6 +6,7 @@
 .Rlib/
 data/raw/
 data/processed/
+data/external/
 output/
 dist/
 *_files/

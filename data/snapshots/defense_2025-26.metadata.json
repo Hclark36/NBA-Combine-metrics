@@ -1,0 +1,12 @@
+{
+  "source": "NBA Stats via SportsDataverse raw archive",
+  "source_url": "https://raw.githubusercontent.com/sportsdataverse/hoopR-nba-stats-raw/a9233ab1546e90714768644e694b2c891c1f2920/nba_stats/json/leaguedashptdefend/2026/regular-season_overall_totals.json",
+  "archive_commit": "a9233ab1546e90714768644e694b2c891c1f2920",
+  "season": "2025-26",
+  "season_type": "Regular Season",
+  "per_mode": "Totals",
+  "defense_category": "Overall",
+  "rows": 580,
+  "csv_sha256": "b967776ef8f0dd22a3c58b342ba8f58710cdfcd0cda6b993a644a1c7b49e1e66",
+  "retrieved_at_utc": "2026-10-17 03:33:49 UTC"
+}

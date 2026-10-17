@@ -1,8 +1,9 @@
 if (!file.exists('config.R')) stop('Run from the repository root.')
 if (dir.exists('.Rlib')) .libPaths(c(normalizePath('.Rlib'), .libPaths()))
 args <- commandArgs(trailingOnly = TRUE)
-if (any(!args %in% '--demo')) stop('Only --demo is supported.')
-mode <- if ('--demo' %in% args) 'demo' else 'live'
+if (any(!args %in% c('--demo', '--archive'))) stop('Supported modes: --demo or --archive.')
+if (all(c('--demo', '--archive') %in% args)) stop('Choose one data mode.')
+mode <- if ('--demo' %in% args) 'demo' else if ('--archive' %in% args) 'archive' else 'live'
 if (!file.exists(file.path('output', mode, 'analysis.rds'))) stop('Run scripts/run.R first for mode: ', mode)
 quarto <- Sys.getenv('QUARTO_BIN', unset = Sys.which('quarto'))
 if (!nzchar(quarto)) {

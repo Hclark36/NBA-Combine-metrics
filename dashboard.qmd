@@ -17,7 +17,7 @@ library(crosstalk)
 library(htmltools)
 invisible(Sys.setlocale('LC_CTYPE', 'en_US.UTF-8'))
 mode <- Sys.getenv('NBA_ANALYSIS_MODE', 'live')
-stopifnot(mode %in% c('demo', 'live'))
+stopifnot(mode %in% c('demo', 'live', 'archive'))
 path <- file.path('output', mode, 'analysis.rds')
 if (!file.exists(path)) stop('No analysis for requested mode. Run scripts/run.R first.')
 result <- readRDS(path)
@@ -26,6 +26,10 @@ d <- result$prepared$analysis
 cohort <- result$prepared$cohort
 metrics <- result$models$metrics
 demo <- identical(mode, 'demo')
+latest_start <- max(result$config$season_starts)
+latest_season <- sprintf('%d-%02d', latest_start, (latest_start + 1) %% 100)
+latest_windows <- result$prepared$windows |>
+  filter(season_start == latest_start, player_id %in% d$player_id)
 label <- function(text) paste0(if (demo) 'SIMULATED · ' else '', text)
 palette <- c(G = '#087f78', F = '#ce7231', C = '#5b66a5', Other = '#777777')
 theme_set(theme_minimal(base_size = 12) + theme(panel.grid.minor = element_blank()))
@@ -36,7 +40,9 @@ banner <- function() {
     'Do not interpret model scores or chart patterns as evidence about basketball.')
   else div(class = 'research-note', strong('OBSERVATIONAL NBA ANALYSIS'), tags$br(),
     'Shot-defense associations among measured combine participants with matched NBA outcomes. ',
-    'This is not a causal estimate or an overall defensive ranking.')
+    'This is not a causal estimate or an overall defensive ranking. ',
+    if (mode == 'archive') 'Data: original NBA responses archived by SportsDataverse. ' else '',
+    paste0('Latest included season: ', latest_season, '.'))
 }
 ```
 
@@ -55,6 +61,9 @@ tags$div(class = 'stat-grid',
   div(class = 'stat', strong(nrow(d)), span('Eligible for the matched analysis')),
   div(class = 'stat', strong(result$models$test_n), span('Players in untouched test classes')),
   div(class = 'stat', strong(paste(range(d$combine_year), collapse = '–')), span('Combine years')))
+tags$p('Latest season: ', latest_season, '. ', nrow(latest_windows),
+       ' eligible players contribute ', format(sum(latest_windows$d_fga), big.mark = ','),
+       ' defended attempts from that season to the outcome windows.')
 ```
 
 ## Row
@@ -227,6 +236,9 @@ interactive_plot(ggplot(result$prepared$coverage,
 banner()
 knitr::kable(result$prepared$flow, col.names = c('Mutually exclusive status', 'Players'))
 tags$p(nrow(result$prepared$repeated), ' later repeat combine records were excluded before this table.')
+tags$p(nrow(result$prepared$excluded_defense),
+       ' ambiguous defensive source rows were excluded before matching. ',
+       'See excluded_defense.csv; no position-split rows are summed automatically.')
 tags$p('Each player needs at least ', result$config$min_defended_attempts,
        ' defended shots across the ', result$config$window_seasons,
        ' seasons following the combine. All three calendar seasons must be requested; ',
@@ -247,6 +259,7 @@ Participation and missing drill results can select an unusual subset of prospect
 
 ```{r}
 tags$p('Data mode: ', toupper(mode), '. Generated: ', result$generated_at)
+if (mode == 'archive') tags$p('Pinned SportsDataverse raw archive commit: ', result$source_commit)
 tags$p('Raw live responses and fetch metadata are cached locally; demo outputs use separate paths. ',
        'See README.md for collection and rendering commands. Failed requests abort the live run.')
 ```
