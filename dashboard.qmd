@@ -31,6 +31,8 @@ cohort <- result$prepared$cohort
 metrics <- result$models$metrics
 uncertainty <- result$uncertainty
 robustness <- result$robustness
+source('R/visuals.R')
+findings <- finding_plots(result)
 agility_cases <- filter(robustness$comparisons, comparison == '+ Lane agility')
 demo <- identical(mode, 'demo')
 latest_start <- max(result$config$season_starts)
@@ -78,11 +80,7 @@ tags$p('Latest season: ', latest_season, '. ', nrow(latest_windows),
 ### Does agility add predictive value?
 
 ```{r}
-p <- ggplot(metrics, aes(reorder(model, -rmse), rmse, fill = model)) +
-  geom_col(width = .65, show.legend = FALSE) + coord_flip() +
-  scale_fill_manual(values = c('#77918b', '#0d776f', '#ce7231', '#5b66a5')) +
-  labs(title = label('Held-out prediction error'), x = NULL, y = 'RMSE (percentage points; lower is better)')
-interactive_plot(p)
+interactive_plot(findings$accuracy)
 ```
 
 ### Read the result {.height=auto}
@@ -108,6 +106,22 @@ tags$p('Training classes: ', paste(result$models$train_years, collapse = ', '),
 tags$p('Classes omitted between training and test to prevent overlapping outcome windows: ',
        paste(result$models$embargo_years, collapse = ', '), '.')
 knitr::kable(metrics, digits = 2, col.names = c('Model', 'Players', 'RMSE (pp)', 'MAE (pp)'))
+```
+
+## Row {height="440px"}
+
+### See the player data
+
+```{r}
+#| height: 440px
+interactive_plot(findings$agility)
+```
+
+### See how the finding changes
+
+```{r}
+#| height: 440px
+interactive_plot(findings$sensitivity)
 ```
 
 # Explore players

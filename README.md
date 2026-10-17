@@ -31,6 +31,24 @@ These default to real archived NBA data and produce `dist/archive.html`. After g
 
 Requirements: R >= 4.4 and Quarto >= 1.6. The render script discovers Quarto in PATH or the usual macOS RStudio bundle; otherwise set `QUARTO_BIN` to its executable path. Dependencies are installed into ignored project-local `.Rlib/`. A package version snapshot is written to `output/<mode>/session-info.txt` after every successful run. A fully pinned dependency lockfile is not included yet.
 
+## Charts in RStudio and exported figures
+
+After running the analysis, run this in the RStudio Console:
+
+```r
+source('scripts/visualize.R')
+```
+
+This displays four charts in the Plots pane: model accuracy, agility versus shot defense,
+model improvement with uncertainty intervals, and a sensitivity heatmap. Use the Plots
+pane arrows to browse them. PNG and PDF copies plus a combined `findings.png` chart sheet
+are saved in `output/archive/figures/`. In the Terminal, use
+`Rscript scripts/visualize.R --archive` (or `--demo` for clearly labeled simulated figures).
+
+The HTML dashboard's Overview page also includes the player scatterplot and sensitivity
+heatmap. Hover and zoom there; use Explore players for linked filters and In motion for
+the animated combine-class scatterplot.
+
 ## Collect real data
 
 Recommended: use the archived original NBA responses, pinned to a source commit:
